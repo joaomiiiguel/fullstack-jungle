@@ -1,16 +1,28 @@
 # Regras Frontend
 
+> **Contexto:** Aplicação de cassino online com foco em tempo real, alta performance e identidade visual imersiva.  
+> **Versão do documento:** 1.0  
+> **Última atualização:** 2026
+
+---
+
 # Stack
 
 ## Obrigatório
 
-- Next.js
-- React
-- TypeScript strict
-- Tailwind CSS v4
-- shadcn/ui
-- TanStack Query
-- Context API
+| Tecnologia       | Versão/Detalhe         | Papel                        |
+|------------------|------------------------|------------------------------|
+| Next.js          | Pages Router           | Framework principal          |
+| TypeScript       | strict mode            | Tipagem                      |
+| Tailwind CSS     | v4                     | Estilização                  |
+| TanStack Query   | v5                     | Server state                 |
+| Context API      | —                      | Client state                 |
+
+## Proibido adicionar sem aprovação
+
+- Gerenciadores de estado externos (Redux, Zustand, Jotai)
+- Bibliotecas de formulário (react-hook-form, Formik) sem aprovação
+- Qualquer lib que duplique responsabilidade da stack acima
 
 ---
 
@@ -18,12 +30,13 @@
 
 ```txt
 src/
-  components/
-  features/
-  hooks/
-  services/
-  stores/
-  pages/
+  pages/                  # Rotas Next.js (Pages Router)
+  components/             # Componentes dumb/UI reutilizáveis
+  hooks/                  # Hooks globais reutilizáveis
+  services/               # Configuração de cliente HTTP / WebSocket
+  stores/                 # Contextos globais (Context API)
+  lib/                    # Utilitários e helpers
+  types/                  # Tipos globais compartilhados
 ```
 
 ---
@@ -32,18 +45,43 @@ src/
 
 ## Obrigatório
 
-- componentes devem ser dumb
-- responsabilidade única
-- UI reutilizável
-- inputs controlados
-- suporte à acessibilidade
+- Componentes **dumb**: recebem props, renderizam UI — sem lógica de negócio
+- Responsabilidade única por componente
+- UI reutilizável e desacoplada de domínio
+- Inputs controlados com estado externo
+- Suporte a acessibilidade: `aria-*`, roles semânticos, navegação por teclado
+- Props tipadas com `interface` nomeada (ex: `ButtonProps`)
+- Exportar como **named export**
 
 ## Proibido
 
-- lógica de negócio em componentes
-- chamadas API diretas em componentes
-- componentes gigantes
-- side effects no render
+- Lógica de negócio dentro de componentes
+- Chamadas de API diretamente em componentes
+- Side effects no corpo do render (fora de `useEffect`)
+- Hardcode de strings visíveis ao usuário (usar constantes ou i18n)
+
+## Exemplo de estrutura
+
+```tsx
+// ✅ Correto
+interface BetButtonProps {
+  amount: number;
+  disabled: boolean;
+  onConfirm: () => void;
+}
+
+export function BetButton({ amount, disabled, onConfirm }: BetButtonProps) {
+  return (
+    <button
+      aria-label={`Apostar ${amount}`}
+      disabled={disabled}
+      onClick={onConfirm}
+    >
+      Apostar {amount}
+    </button>
+  );
+}
+```
 
 ---
 
@@ -51,33 +89,49 @@ src/
 
 ## Obrigatório
 
-- isolar lógica de negócio
-- lógica reutilizável
-- usar custom hooks
+- Isolar **toda** lógica de negócio em hooks
+- Nomeação: `use[Domínio][Ação]` — ex: `useBetSubmit`, `useRoundResult`
+- Retornar objetos nomeados (não arrays, exceto quando semântico)
+- Um hook por responsabilidade
 
 ## Proibido
 
-- websocket dentro de componentes
-- lógica duplicada
-- manipulação direta do DOM
+- Conexão WebSocket diretamente em componentes — usar `useWebSocket` global
+- Lógica duplicada entre hooks — abstrair em hook base
+- Manipulação direta do DOM sem `useRef`
+- Hooks com mais de **100 linhas** — dividir em sub-hooks
 
 ---
 
 # Gerenciamento de Estado
 
-## Server State
+## Server State → TanStack Query (EXCLUSIVO)
 
-Usar SOMENTE:
+```ts
+// Query keys como constantes
+export const QUERY_KEYS = {
+  rounds: ['rounds'] as const,
+  round: (id: string) => ['rounds', id] as const,
+  userBalance: ['user', 'balance'] as const,
+};
+```
 
-- TanStack Query
+- Usar `queryClient.invalidateQueries` para invalidação após mutações
+- Usar `optimisticUpdate` em ações críticas de UX (ex: apostar)
+- Todo estado de loading/error deve vir do TanStack Query
 
----
+## Client State → Context API (EXCLUSIVO)
 
-## Client State
+- Usar apenas para estado **global de UI** (tema, modal aberto, sidebar)
+- Não armazenar dados de servidor no Context
+- Separar contextos por domínio — nunca um `AppContext` monolítico
 
-Usar SOMENTE:
+## Regra de ouro
 
-- Context API
+```
+Dado que veio do servidor? → TanStack Query
+Dado que é estado local da UI? → Context API ou useState local
+```
 
 ---
 
@@ -85,46 +139,67 @@ Usar SOMENTE:
 
 ## Obrigatório
 
-- query keys
-- cache invalidation
-- optimistic updates quando necessário
-- loading states
-- error states
+- Toda chamada HTTP via **service function** tipada
+- Query keys semânticas e centralizadas
+- Cache invalidation explícita após mutações
+- Optimistic updates em ações visíveis ao usuário
+- Tratar estados: `isLoading`, `isError`, `isEmpty`
 
 ## Proibido
 
-- fetch dentro de useEffect
-- requests duplicadas
-- cache manual
+- `fetch` ou `axios` diretamente em componentes ou hooks de UI
+- `useEffect` para buscar dados — usar `useQuery`
+- Requests duplicadas (configurar `staleTime` adequado)
+- Cache manual paralelo ao TanStack Query
 
----
+```ts
+// ✅ Correto
+// services/rounds.ts
+export async function fetchRound(id: string): Promise<Round> {
+  const { data } = await api.get(`/rounds/${id}`);
+  return data;
+}
 
-# Regras de UI
-
-## Obrigatório
-
-- dark mode
-- design responsivo
-- identidade visual cassino
-- skeleton loading
-- toast notifications
-- animações suaves
+// hooks/useRound.ts
+export function useRound(id: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.round(id),
+    queryFn: () => fetchRound(id),
+    staleTime: 5_000,
+  });
+}
+```
 
 ---
 
 # Regras WebSocket
 
-## Frontend NUNCA calcula multiplicador
+## Princípio crítico
 
-Frontend apenas renderiza dados do servidor.
-
----
+> **O frontend NUNCA calcula, processa ou infere dados de jogo.**  
+> O frontend é um **display** — apenas renderiza o que o servidor envia.
 
 ## Obrigatório
 
-- reconnect strategy
-- tratamento de status da conexão
-- sincronização com servidor
+- Hook dedicado: `useGameSocket` com gestão completa do ciclo de vida
+- Reconnect automático com backoff exponencial
+- Exibir status da conexão ao usuário (conectado / reconectando / desconectado)
+- Sincronização de estado local com eventos do servidor via `queryClient.setQueryData`
+- Tipagem forte para todos os eventos recebidos
+
+## Proibido
+
+- Calcular multiplicador, resultado ou qualquer dado de jogo no frontend
+- Confiar em estado local para decisões críticas sem confirmar com servidor
+- Criar múltiplas instâncias de WebSocket para o mesmo canal
+
+```ts
+// Tipagem de eventos
+type ServerEvent =
+  | { type: 'ROUND_START'; payload: RoundStartPayload }
+  | { type: 'MULTIPLIER_UPDATE'; payload: MultiplierPayload }
+  | { type: 'ROUND_END'; payload: RoundEndPayload };
+```
 
 ---
 
@@ -132,14 +207,47 @@ Frontend apenas renderiza dados do servidor.
 
 ## Obrigatório
 
-- formulários controlados
-- validação antes do submit
-- desabilitar ações inválidas
+- Formulários **sempre** controlados
+- Validação no cliente antes do submit (schema Zod recomendado)
+- Desabilitar submit enquanto `isLoading`
+- Feedback imediato de erro por campo
+- Prevenir duplo submit
 
 ## Proibido
 
-- valores monetários inválidos
-- submit durante loading
+- Valores monetários sem formatação e validação adequada
+- Submit sem validação prévia
+- Inputs não controlados (`defaultValue` sem controle)
+
+```tsx
+// ✅ Validação antes do submit
+const schema = z.object({
+  amount: z.number().min(1).max(MAX_BET),
+});
+```
+
+---
+
+# Regras de UI
+
+## Obrigatório
+
+- **Dark mode nativo** — design pensado primeiro para dark
+- **Design responsivo** — mobile-first, breakpoints: `sm / md / lg / xl`
+- **Identidade visual cassino** — cores vibrantes, contraste alto, atmosfera imersiva
+- **Skeleton loading** em todo conteúdo assíncrono
+- **Toast notifications** para feedback de ações (sucesso, erro, aviso)
+- **Animações suaves** — preferir `transition` e `animate` do Tailwind; evitar jank
+
+## Padrão de feedback visual
+
+| Situação            | Componente            |
+|---------------------|-----------------------|
+| Carregando dados    | `<Skeleton />`        |
+| Ação bem-sucedida   | Toast success         |
+| Erro de ação        | Toast error           |
+| Erro de página      | `<ErrorBoundary />`   |
+| Sem dados           | Empty state component |
 
 ---
 
@@ -147,68 +255,102 @@ Frontend apenas renderiza dados do servidor.
 
 ## Obrigatório
 
-- memoization quando necessário
-- evitar re-renderizações desnecessárias
-- lazy loading quando necessário
+- `React.memo` em componentes que recebem props estáveis mas re-renderizam com frequência
+- `useMemo` / `useCallback` apenas quando há custo computacional mensurável
+- `lazy()` + `Suspense` para rotas e componentes pesados não críticos
+- Imagens via `next/image` com tamanhos declarados
 
 ## Proibido
 
-- rerender global
-- estado duplicado
+- Re-render global por mudança de estado local — manter estado no nível mínimo necessário
+- Estado duplicado entre Context e TanStack Query
+- `useEffect` encadeados para derivar estado — usar `useMemo`
 
 ---
 
 # Regras TypeScript
 
-## Obrigatório
+## Configuração obrigatória
 
 ```json
 {
-  "strict": true
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  }
 }
 ```
 
----
+## Obrigatório
+
+- Tipar **todas** as props, retornos de função e respostas de API
+- Usar `interface` para objetos de domínio, `type` para unions e utilitários
+- Usar `satisfies` ao declarar objetos contra um tipo
 
 ## Proibido
 
-- any
-- ts-ignore
-- implicit any
+- `any` — substituir por `unknown` + type guard
+- `// @ts-ignore` — corrigir o tipo ou usar `// @ts-expect-error` com justificativa
+- `implicit any` (coberto pelo strict)
+- Type assertions sem validação (`as X` em dados externos)
 
 ---
 
-# Anti-patterns
+# Anti-patterns — Referência rápida
 
-## Proibido
+| Anti-pattern              | Alternativa correta                        |
+|---------------------------|--------------------------------------------|
+| Prop drilling 3+ níveis   | Context API ou composição                  |
+| fetch em componente       | `useQuery` via hook dedicado               |
+| Hook com 100+ linhas      | Dividir em hooks menores                   |
+| Mutable shared state      | Imutabilidade + Context/Query              |
+| Lógica duplicada          | Hook ou util compartilhado                 |
+| `useEffect` para fetch    | `useQuery`                                 |
+| `any` no TypeScript       | `unknown` + type guard                     |
+| Múltiplos WebSockets      | Singleton via hook centralizado            |
 
-- prop drilling
-- fetch em componentes
-- hooks gigantes
-- mutable shared state
-- lógica duplicada
+---
 
 # Formato Obrigatório de Resposta da IA
 
-````
-# O que foi aplicado
+Toda resposta de implementação deve seguir esta estrutura:
 
-- ...
+```markdown
+## ✅ O que foi aplicado
 
+- [descrição objetiva de cada mudança implementada]
 
-# Eventos Criados
+---
 
+## 🔗 Eventos / Integrações Criadas
 
-- ...
+- [eventos WebSocket, Query Keys, Context consumers adicionados]
+- (omitir seção se não houver)
 
-# Possíveis Riscos (Se houver)
+---
 
-- ...
+## ⚠️ Possíveis Riscos
 
-# Checklist de Validação
+- [race conditions, edge cases, limitações conhecidas]
+- (omitir seção se não houver)
 
--...
- 
-# Relatorio de Testes
+---
 
--...
+## ✔️ Checklist de Validação
+
+- [ ] TypeScript sem erros (`tsc --noEmit`)
+- [ ] Nenhum `any` introduzido
+- [ ] Componente sem lógica de negócio
+- [ ] Estados de loading e erro tratados
+- [ ] Acessibilidade verificada (aria, roles)
+- [ ] Responsivo em mobile e desktop
+
+---
+
+## 🧪 Relatório de Testes
+
+- Casos cobertos: [lista]
+- Casos de borda verificados: [lista]
+- Casos não cobertos (e motivo): [lista]
+```

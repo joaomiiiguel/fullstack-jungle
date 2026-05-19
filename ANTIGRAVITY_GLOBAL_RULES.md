@@ -61,21 +61,21 @@ Construir uma plataforma de Crash Game multiplayer em tempo real com:
 ---
 
 # 3. Tecnologias Obrigatórias
-
-| Camada | Tecnologia |
-|---|---|
-| Frontend | Next.js |
-| Backend | NestJS + TypeScript (strict mode) |
-| Banco | PostgreSQL com TypeORM |
-| Mensageria | RabbitMQ |
-| API Gateway | Kong |
-| IdP | Keycloak |
-| WebSocket | @nestjs/websockets |
-| Estilo | Tailwind CSS v4 + shadcn/ui |
-| Estado | TanStack Query (server state) + Context (client state) |
-| Testes | Bun test runner |
-| Docs | Swagger (@nestjs/swagger) |
-| Infra | Docker Compose |
+   
+| Camada        |        Tecnologia               |
+|---------------|---------------------------------|
+| Frontend      |      Next.js                    |
+| Backend       |      NestJS + TypeScript (strict mode) |
+| Banco         |      PostgreSQL com TypeORM     |
+| Mensageria    |      RabbitMQ                   |
+| API Gateway   |      Kong                       |
+| IdP           |      Keycloak                   |
+| WebSocket     |      @nestjs/websockets         |
+| Estilo        |      Tailwind CSS v4 + shadcn/ui |
+| Estado        |      TanStack Query (server state) + Context (client state) |
+| Testes        |      Bun test runner            |
+| Docs          |      Swagger (@nestjs/swagger)  |
+| Infra         |      Docker Compose             |
 
 ---
 
@@ -90,94 +90,6 @@ Construir uma plataforma de Crash Game multiplayer em tempo real com:
   └── packages/
   └── docker/
 ```
-
----
-
-# 5. Bounded Contexts
-
-## Game Context
-
-Responsável apenas por:
-
-- rounds
-- bets
-- crash engine
-- websocket
-
-Nunca acessar saldo diretamente.
-
----
-
-## Wallet Context
-
-Responsável apenas por:
-
-- saldo
-- transações financeiras
-
-Nunca conhecer regras do jogo.
-
----
-
-# 6. Estrutura Backend (NestJS)
-
-## Estrutura obrigatória
-
-```
-src/
-  domain/
-  application/
-  infrastructure/
-  presentation/
-```
-
-## Regras
-
-- Controllers nunca possuem regra de negócio
-- Use cases ficam em application/use-cases
-- Domain nunca importa NestJS
-- Infrastructure nunca contém regra de domínio
-
----
-
-# 7. Serviços Obrigatórios
-
-## Frontend
-
-Responsável por:
-
-- UI do jogo
-- Comunicação REST
-- Comunicação WebSocket
-- Login OIDC
-- Estado da aplicação
-- Renderização do gráfico
-
----
-
-## Game Service
-
-Responsável por:
-
-- Ciclo de vida das rodadas
-- Lógica do crash
-- Apostas
-- Cashouts
-- WebSocket
-- Provably Fair
-- Histórico de rodadas
-
----
-
-## Wallet Service
-
-Responsável por:
-
-- Carteira
-- Crédito
-- Débito
-- Histórico financeiro
-- Consistência monetária
 
 ---
 
@@ -201,56 +113,6 @@ Responsável por:
 - Rate Limiting
 - CORS
 - Plugin
-
----
-
-# 10. Regras do Domínio
-
-## Round
-
-- Apenas uma rodada ativa
-- Rodada deve passar:
-  - BETTING
-  - RUNNING
-  - CRASHED
-  - FINISHED
-
----
-
-## Bet
-
-- Um jogador só pode apostar uma vez por rodada
-- Bet não pode mudar valor após criação
-- Cashout só pode ocorrer antes do crash
-
----
-
-## Wallet
-
-- Saldo nunca pode ser negativo
-- Toda operação deve gerar transaction log
-
----
-
-# 11. Eventos de Domínio
-
-## Game Events
-
-- round.created
-- round.started
-- round.crashed
-- bet.placed
-- bet.cashout.requested
-- bet.cashout.completed
-
----
-
-## Wallet Events
-
-- wallet.debit.requested
-- wallet.debit.completed
-- wallet.credit.completed
-- wallet.transaction.failed
 
 ---
 
@@ -280,30 +142,6 @@ Cliente nunca altera estado via socket.
 
 ---
 
-# 13. Estratégia Monetária
-
-## Obrigatório
-
-Todos valores monetários devem usar:
-
-- bigint em centavos
-
----
-
-## Exemplo
-
-```
-R$10,50 => 1050
-```
-
----
-
-## Nunca usar
-
-- float
-- number decimal
-
----
 
 # 14. Anti-Patterns Proibidos
 
@@ -368,26 +206,3 @@ Antes de gerar código, verificar:
 - Linguagem obrigatória para comentários, mensagens para o usuário e documentação: Português (BR)
 
 ---
-
-# 19. Formato Obrigatório de Resposta da IA
-
-````
-# Regras Aplicadas
-
-- ...
-
-# Arquitetura Aplicada
-
-- ...
-
-# Eventos Criados
-
-- ...
-
-# Regras de Domínio Validadas
-
-- ...
-
-# Possíveis Riscos
-
-- ...
