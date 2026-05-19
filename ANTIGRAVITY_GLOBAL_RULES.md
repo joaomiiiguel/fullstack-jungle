@@ -172,21 +172,20 @@ Cliente nunca altera estado via socket.
 
 # 16. Testes Obrigatórios
 
-## Unit
+## Unitários (camada de domínio)
 
-- entities
-- value objects
-- domain services
-- provably fair
+- Ciclo de vida do Round (transições de estado, violação de invariantes)
+- Lógica de Bet (cálculo de cashout, transições de status, validação de valor)
+- Wallet (crédito, débito, saldo insuficiente, precisão monetária)
+- Provably fair (cálculo determinístico do crash point, verificação da hash chain)
 
 ---
 
-## E2E
+## E2E (camada de API)
 
-- bet flow
-- crash flow
-- wallet consistency
-- websocket sync
+- Apostar → multiplicador sobe → cashout → saldo atualizado
+- Apostar → crash → aposta perdida
+- Erros de validação (saldo insuficiente, aposta dupla, aposta durante rodada ativa)
 
 ---
 
