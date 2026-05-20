@@ -9,7 +9,7 @@ export class WalletsController {
   constructor(
     @Inject('GetBalanceUseCase') private readonly getBalanceUseCase: GetBalanceUseCase,
     @Inject('CreateWalletUseCase') private readonly createWalletUseCase: CreateWalletUseCase,
-  ) {}
+  ) { }
 
   @Get('health')
   check(): HealthCheckResponseDto {
